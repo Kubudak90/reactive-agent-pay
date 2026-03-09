@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { PaymentReceipt } from "../../shared/types";
+import { PaymentReceipt } from "../../shared/types.js";
 
 const router = Router();
 
@@ -7,10 +7,10 @@ const router = Router();
 const payments: Map<string, PaymentReceipt> = new Map();
 
 // Process payment (x402 style)
-router.post("/process", async (req, res) => {
+router.post("/pay", async (req, res) => {
   const { subscriptionId, eventHash, amount, token } = req.body;
 
-  if (!subscriptionId || !eventHash || !amount) {
+  if (!subscriptionId || !eventHash) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -19,7 +19,7 @@ router.post("/process", async (req, res) => {
   const receipt: PaymentReceipt = {
     subscriptionId,
     eventHash,
-    amount,
+    amount: amount || "0.01",
     token: token || "USDC",
     timestamp: Date.now(),
   };
@@ -33,8 +33,7 @@ router.post("/process", async (req, res) => {
 
   res.status(201).json({
     message: "Payment processed successfully",
-    paymentId,
-    receipt,
+    payment: receipt,
   });
 });
 

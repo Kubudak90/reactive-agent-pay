@@ -1,12 +1,12 @@
 import express from "express";
 import cors from "cors";
 import { createPublicClient, createWalletClient, http, parseEther, formatEther } from "viem";
-import { somnia } from "./chains/somnia";
-import { reactiveRouter } from "./routes/reactive";
-import { paymentRouter } from "./routes/payment";
-import { serviceRouter } from "./routes/services";
-import { ReactiveEngine } from "./engine/reactive";
-import { X402PaymentHandler } from "./payments/x402";
+import { somnia } from "./chains/somnia.js";
+import { reactiveRouter } from "./routes/reactive.js";
+import { paymentRouter } from "./routes/payment.js";
+import { serviceRouter } from "./routes/services.js";
+import { ReactiveEngine } from "./engine/reactive.js";
+import { X402PaymentHandler } from "./payments/x402.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -71,4 +71,4 @@ app.listen(PORT, () => {
   console.log(`💰 x402 micropayments enabled`);
 });
 
-export { reactiveEngine, x402Handler, publicClient };
+export { reactiveEngine, x402Handler };

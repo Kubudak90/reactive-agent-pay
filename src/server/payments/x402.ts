@@ -89,31 +89,21 @@ export class X402PaymentHandler {
   }
 
   /**
-   * Create a payment request (HTTP 402 style)
+   * Generate x402 payment header
    */
-  createPaymentRequest(
-    serviceId: string,
-    price: string,
-    callbackUrl: string
-  ): {
-    status: number;
-    headers: Record<string, string>;
-    body: any;
-  } {
-    return {
-      status: 402,
-      headers: {
-        "X-Payment-Required": "true",
-        "X-Payment-Amount": price,
-        "X-Payment-Token": "USDC",
-        "X-Payment-Network": "base",
-        "X-Payment-Callback": callbackUrl,
-      },
-      body: {
-        error: "Payment Required",
-        message: `This service requires ${price} USDC per event`,
-        paymentUrl: callbackUrl,
-      },
+  generatePaymentHeader(price: string, recipient: string): string {
+    // x402 payment header format
+    const paymentData = {
+      scheme: "exact",
+      network: "base",
+      maxAmountRequired: price,
+      resource: "reactive-event",
+      description: "Payment for reactive blockchain event",
+      mimeType: "application/json",
+      payTo: recipient,
+      expiresAt: Date.now() + 300000, // 5 minutes
     };
+
+    return `X-Payment-Required: ${JSON.stringify(paymentData)}`;
   }
 }

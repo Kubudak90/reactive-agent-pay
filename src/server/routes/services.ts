@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ServiceListing } from "../../shared/types";
+import { ServiceListing } from "../../shared/types.js";
 
 const router = Router();
 
@@ -25,7 +25,7 @@ router.get("/:id", (req, res) => {
 });
 
 // Register new service
-router.post("/register", (req, res) => {
+router.post("/", (req, res) => {
   const { name, description, pricePerEvent, eventTypes, provider, metadata } = req.body;
 
   if (!name || !description || !pricePerEvent || !eventTypes || !provider) {
@@ -80,7 +80,7 @@ router.get("/provider/:address", (req, res) => {
   const providerServices = Array.from(services.values()).filter(
     (s) => s.provider.toLowerCase() === req.params.address.toLowerCase()
   );
-  
+
   res.json({
     services: providerServices,
     count: providerServices.length,
@@ -89,13 +89,13 @@ router.get("/provider/:address", (req, res) => {
 
 // Get services by event type
 router.get("/event-type/:type", (req, res) => {
-  const matchingServices = Array.from(services.values()).filter(
+  const eventServices = Array.from(services.values()).filter(
     (s) => s.eventTypes.includes(req.params.type) && s.active
   );
-  
+
   res.json({
-    services: matchingServices,
-    count: matchingServices.length,
+    services: eventServices,
+    count: eventServices.length,
   });
 });
 

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ReactiveEvent, Subscription } from "../../shared/types";
+import { ReactiveEvent, Subscription } from "../../shared/types.js";
 
 const router = Router();
 
@@ -64,73 +64,59 @@ router.get("/subscription/:id", (req, res) => {
 });
 
 // Get user subscriptions
-router.get("/user/:address", (req, res) => {
+router.get("/subscriptions/:address", (req, res) => {
   const userSubs = Array.from(subscriptions.values()).filter(
     (s) => s.subscriber.toLowerCase() === req.params.address.toLowerCase()
   );
 
   res.json({
     subscriptions: userSubs,
-    count: userSubs.length,
   });
 });
 
-// Emit event (called by reactive engine)
-router.post("/emit", async (req, res) => {
+// Trigger event (called by reactive engine)
+router.post("/trigger", async (req, res) => {
   const { serviceId, eventType, payload } = req.body;
 
-  // Find all active subscriptions for this service
+  // Find active subscriptions for this service
   const serviceSubs = Array.from(subscriptions.values()).filter(
     (s) => s.serviceId === serviceId && s.active
   );
 
-  const eventPromises = serviceSubs.map(async (sub) => {
-    const event: ReactiveEvent = {
-      subscriptionId: sub.id,
-      serviceId,
-      eventType,
-      payload,
-      timestamp: Date.now(),
-    };
+  const event: ReactiveEvent = {
+    subscriptionId: "",
+    serviceId,
+    eventType,
+    payload,
+    timestamp: Date.now(),
+  };
 
-    // Store event
-    const subEvents = events.get(sub.id) || [];
-    subEvents.push(event);
-    events.set(sub.id, subEvents);
-
-    // Update subscription stats
-    sub.totalEventsReceived++;
-    subscriptions.set(sub.id, sub);
-
-    // Send webhook to callback URL
+  // Emit to all subscribers
+  let notifiedCount = 0;
+  for (const sub of serviceSubs) {
     try {
-      await fetch(sub.callbackUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(event),
-      });
+      // In production, this would call the webhook
+      // await fetch(sub.callbackUrl, { method: "POST", body: JSON.stringify(event) });
+      
+      // Track event
+      const subEvents = events.get(sub.id) || [];
+      subEvents.push({ ...event, subscriptionId: sub.id });
+      events.set(sub.id, subEvents);
+      
+      // Update subscription stats
+      sub.totalEventsReceived++;
+      subscriptions.set(sub.id, sub);
+      
+      notifiedCount++;
     } catch (error) {
-      console.error(`Failed to send webhook to ${sub.callbackUrl}:`, error);
+      console.error(`Failed to emit to ${sub.callbackUrl}:`, error);
     }
-
-    return event;
-  });
-
-  const emittedEvents = await Promise.all(eventPromises);
+  }
 
   res.json({
-    message: `Emitted ${emittedEvents.length} events`,
-    events: emittedEvents,
+    triggered: true,
+    subscribersNotified: notifiedCount,
   });
 });
 
-// Get events for subscription
-router.get("/events/:subscriptionId", (req, res) => {
-  const subEvents = events.get(req.params.subscriptionId) || [];
-  res.json({
-    events: subEvents,
-    count: subEvents.length,
-  });
-});
-
-export { router as reactiveRouter, subscriptions, events };
+export { router as reactiveRouter };

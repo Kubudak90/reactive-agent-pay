@@ -1,5 +1,5 @@
 import { PublicClient, parseAbi } from "viem";
-import { ReactiveEvent } from "../../shared/types";
+import { ReactiveEvent } from "../../shared/types.js";
 
 /**
  * Reactive Engine - Monitors blockchain events and triggers callbacks
@@ -78,60 +78,38 @@ export class ReactiveEngine {
   }
 
   /**
-   * Simulate checking for blockchain events
-   * In production, this would use Somnia's Reactivity SDK subscriptions
+   * Check for new blockchain events
    */
   private async checkForEvents() {
     try {
+      // Get latest block number
       const blockNumber = await this.client.getBlockNumber();
       
-      // Simulate finding events (in production, query actual events)
-      // This is where Somnia's Reactivity SDK would be integrated
+      // In production, this would:
+      // 1. Query Somnia's reactive state for new events
+      // 2. Match events to active subscriptions
+      // 3. Trigger webhooks with x402 payment headers
       
+      // For demo, we just log the block number
+      console.log(`🔗 Checking block ${blockNumber} for reactive events...`);
     } catch (error) {
-      console.error("Error checking for events:", error);
+      console.error("❌ Error checking for events:", error);
     }
   }
 
   /**
    * Emit an event to all subscribers
    */
-  async emitEvent(event: ReactiveEvent) {
+  emitEvent(event: ReactiveEvent) {
     const listeners = this.eventListeners.get(event.eventType);
-    
     if (listeners) {
-      for (const callback of listeners) {
+      listeners.forEach(callback => {
         try {
-          await callback(event);
+          callback(event);
         } catch (error) {
-          console.error(`Error in event callback for ${event.eventType}:`, error);
+          console.error("Error in event callback:", error);
         }
-      }
+      });
     }
-
-    // Also emit to wildcard listeners
-    const wildcards = this.eventListeners.get("*");
-    if (wildcards) {
-      for (const callback of wildcards) {
-        try {
-          await callback(event);
-        } catch (error) {
-          console.error(`Error in wildcard event callback:`, error);
-        }
-      }
-    }
-  }
-
-  /**
-   * Get engine stats
-   */
-  getStats() {
-    return {
-      isRunning: this.isRunningFlag,
-      subscribedEventTypes: Array.from(this.eventListeners.keys()),
-      totalListeners: Array.from(this.eventListeners.values()).reduce(
-        (sum, arr) => sum + arr.length, 0
-      ),
-    };
   }
 }
