@@ -15,6 +15,28 @@ export interface ClientConfig {
   webhookUrl?: string;
 }
 
+interface ServicesResponse {
+  services: ServiceListing[];
+}
+
+interface SubscriptionResponse {
+  subscription: Subscription;
+}
+
+interface SubscriptionsResponse {
+  subscriptions: Subscription[];
+}
+
+interface PaymentResponse {
+  payment: PaymentReceipt;
+}
+
+interface HealthResponse {
+  status: string;
+  reactiveEngine: boolean;
+  x402Enabled: boolean;
+}
+
 export class ReactiveAgentClient {
   private config: ClientConfig;
 
@@ -27,7 +49,7 @@ export class ReactiveAgentClient {
    */
   async getServices(): Promise<ServiceListing[]> {
     const response = await fetch(`${this.config.serverUrl}/api/services`);
-    const data = await response.json();
+    const data = await response.json() as ServicesResponse;
     return data.services;
   }
 
@@ -36,7 +58,7 @@ export class ReactiveAgentClient {
    */
   async getServicesByEventType(eventType: string): Promise<ServiceListing[]> {
     const response = await fetch(`${this.config.serverUrl}/api/services/event-type/${eventType}`);
-    const data = await response.json();
+    const data = await response.json() as ServicesResponse;
     return data.services;
   }
 
@@ -54,7 +76,7 @@ export class ReactiveAgentClient {
       }),
     });
 
-    const data = await response.json();
+    const data = await response.json() as SubscriptionResponse;
     return data.subscription;
   }
 
@@ -72,54 +94,42 @@ export class ReactiveAgentClient {
    */
   async getMySubscriptions(): Promise<Subscription[]> {
     const response = await fetch(
-      `${this.config.serverUrl}/api/reactive/user/${this.config.walletAddress}`
+      `${this.config.serverUrl}/api/reactive/subscriptions/${this.config.walletAddress}`
     );
-    const data = await response.json();
+    const data = await response.json() as SubscriptionsResponse;
     return data.subscriptions;
   }
 
   /**
-   * Get events for a subscription
+   * Pay for a reactive event using x402
    */
-  async getEvents(subscriptionId: string): Promise<ReactiveEvent[]> {
-    const response = await fetch(
-      `${this.config.serverUrl}/api/reactive/events/${subscriptionId}`
-    );
-    const data = await response.json();
-    return data.events;
-  }
-
-  /**
-   * Process payment for an event (x402 style)
-   */
-  async processPayment(
-    subscriptionId: string,
-    eventHash: string,
-    amount: string
-  ): Promise<PaymentReceipt> {
-    const response = await fetch(`${this.config.serverUrl}/api/payment/process`, {
+  async payForEvent(event: ReactiveEvent): Promise<PaymentReceipt> {
+    const response = await fetch(`${this.config.serverUrl}/api/payments/pay`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        subscriptionId,
-        eventHash,
-        amount,
-        token: "USDC",
+        subscriptionId: event.subscriptionId,
+        eventHash: this.hashEvent(event),
       }),
     });
 
-    const data = await response.json();
-    return data.receipt;
+    const data = await response.json() as PaymentResponse;
+    return data.payment;
   }
 
   /**
    * Check server health
    */
-  async healthCheck(): Promise<{ status: string; reactiveEngine: boolean; x402Enabled: boolean }> {
+  async health(): Promise<HealthResponse> {
     const response = await fetch(`${this.config.serverUrl}/health`);
-    return response.json();
+    const data = await response.json() as HealthResponse;
+    return data;
+  }
+
+  private hashEvent(event: ReactiveEvent): string {
+    // Simple hash for demo purposes
+    return `${event.subscriptionId}-${event.timestamp}`;
   }
 }
 
-// Export for use in other modules
-export { ServiceListing, Subscription, ReactiveEvent, PaymentReceipt };
+export default ReactiveAgentClient;

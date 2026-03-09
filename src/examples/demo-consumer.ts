@@ -9,6 +9,7 @@
  */
 
 import { ReactiveAgentClient } from "../client";
+import { ServiceListing, Subscription, ReactiveEvent } from "../shared/types";
 
 const DEMO_CONFIG = {
   serverUrl: "http://localhost:3000",
@@ -24,15 +25,15 @@ async function runConsumerDemo() {
 
   // 1. Check server health
   console.log("📡 Checking server health...");
-  const health = await client.healthCheck();
+  const health = await client.health();
   console.log("✅ Server status:", health);
 
   // 2. Discover available services
   console.log("\n🔍 Discovering services...");
   const services = await client.getServices();
   console.log(`Found ${services.length} services:`);
-  services.forEach(s => {
-    console.log(`  - ${s.name} (${s.eventType}): ${s.pricePerEvent} USDC/event`);
+  services.forEach((s: ServiceListing) => {
+    console.log(`  - ${s.name} (${s.eventTypes.join(", ")}): ${s.pricePerEvent} USDC/event`);
   });
 
   // 3. Subscribe to a service
@@ -42,8 +43,8 @@ async function runConsumerDemo() {
     
     const subscription = await client.subscribe(targetService.id);
     console.log("✅ Subscription created:", subscription.id);
-    console.log("   Status:", subscription.status);
-    console.log("   Price:", subscription.pricePerEvent, "USDC/event");
+    console.log("   Active:", subscription.active);
+    console.log("   Total Paid:", subscription.totalPaid);
 
     // 4. Simulate receiving events
     console.log("\n📨 Simulating event reception...");
@@ -51,33 +52,26 @@ async function runConsumerDemo() {
 
     // 5. Get subscription events
     console.log("\n📊 Getting events for subscription...");
-    const events = await client.getEvents(subscription.id);
-    console.log(`   Received ${events.length} events`);
+    const events = await client.getMySubscriptions();
+    console.log(`   Found ${events.length} subscriptions`);
 
-    // 6. Process payment for an event
-    if (events.length > 0) {
-      const event = events[0];
-      console.log("\n💸 Processing payment for event...");
-      const receipt = await client.processPayment(
-        subscription.id,
-        event.eventHash,
-        subscription.pricePerEvent
-      );
-      console.log("✅ Payment processed:", receipt.paymentId);
-    }
+    // 6. Process payment for a simulated event
+    const mockEvent: ReactiveEvent = {
+      subscriptionId: subscription.id,
+      serviceId: targetService.id,
+      eventType: targetService.eventTypes[0],
+      payload: { message: "Hello from reactive world!" },
+      timestamp: Date.now(),
+    };
 
-    // 7. Unsubscribe
-    console.log("\n🚫 Unsubscribing...");
-    await client.unsubscribe(subscription.id);
-    console.log("✅ Unsubscribed successfully");
+    console.log("\n💸 Processing payment for event...");
+    const payment = await client.payForEvent(mockEvent);
+    console.log("✅ Payment processed!");
+    console.log("   Amount:", payment.amount);
+    console.log("   Token:", payment.token);
   }
 
   console.log("\n✨ Demo complete!");
 }
 
-// Run if executed directly
-if (require.main === module) {
-  runConsumerDemo().catch(console.error);
-}
-
-export { runConsumerDemo };
+runConsumerDemo().catch(console.error);
